@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URL Generator</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    #container {
+      text-align: center;
+    }
+
+    label {
+      font-size: 18px;
+      margin-right: 10px;
+    }
+
+    #urlInput {
+      padding: 8px;
+      font-size: 16px;
+      width: 200px;
+    }
+
+    button {
+      padding: 10px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="container">
+    <label for="urlInput">Enter your link:</label><br><br>
+    <input type="text" id="urlInput" placeholder="www.example.com">
+
+    <button onclick="generateUrl()">Generate</button>
+  </div>
+
+  <script>
+    function generateUrl() {
+      const urlInput = document.getElementById('urlInput').value;
+      const generatedUrl = "https://openinlazada.vercel.app/index.html?url=" + encodeURIComponent(urlInput);
+
+      // Copy to clipboard
+      const tempInput = document.createElement('input');
+      tempInput.value = generatedUrl;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      // Alert
+      alert("Link Copied!");
+    }
+  </script>
+
+</body>
+</html
