@@ -4,22 +4,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My PWewww</title>
+    <title>My ced</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="/styles.css">
     <meta name="theme-color" content="#ffffff">
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png">
     <link rel="apple-touch-icon" href="/icon-192x192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="My ced">
+    <link rel="apple-touch-startup-image" href="/splash-screen.png">
 </head>
 <body>
     <div id="splash-screen" class="splash-screen">
+        <img src="/splash-screen.png" alt="Splash Screen" class="splash-image">
         <div class="loading-animation"></div>
     </div>
     <div id="offline-indicator" class="offline-indicator" style="display: none;">
         You are currently offline
     </div>
     <div class="container">
-        <h1>My PWew</h1>
+        <h1>My ced</h1>
         <!-- Your app content goes here -->
     </div>
     <script>
@@ -44,11 +49,31 @@
             document.getElementById('offline-indicator').style.display = 'block';
         });
 
-        // Hide splash screen after load
+        // Handle splash screen
         window.addEventListener('load', () => {
             setTimeout(() => {
                 document.getElementById('splash-screen').style.display = 'none';
             }, 2000);
+        });
+
+        // Show install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Show install button or banner here
+            const installButton = document.createElement('button');
+            installButton.textContent = 'Install App';
+            installButton.className = 'install-button';
+            installButton.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log('User response to install prompt:', outcome);
+                    deferredPrompt = null;
+                }
+            });
+            document.body.appendChild(installButton);
         });
     </script>
 </body>

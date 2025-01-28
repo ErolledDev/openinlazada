@@ -7,6 +7,7 @@ const urlsToCache = [
   '/manifest.json',
   '/icon-192x192.png',
   '/icon-512x512.png',
+  '/splash-screen.png',
   '/styles.css'
 ];
 
@@ -15,6 +16,22 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(urlsToCache))
   );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
@@ -37,7 +54,6 @@ self.addEventListener('fetch', (event) => {
             return response;
           })
           .catch(() => {
-            // Return offline page when no connection
             return new Response(
               '<html><body><div style="padding: 20px; text-align: center; background-color: #ff4444; color: white;">You are currently offline</div></body></html>',
               { headers: { 'Content-Type': 'text/html' } }
