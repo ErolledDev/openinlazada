@@ -1,80 +1,60 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My ced</title>
+    <title>Test PWA</title>
+    <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
-    <link rel="stylesheet" href="/styles.css">
-    <meta name="theme-color" content="#ffffff">
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png">
-    <link rel="apple-touch-icon" href="/icon-192x192.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="My ced">
-    <link rel="apple-touch-startup-image" href="/splash-screen.png">
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#1a73e8">
+    <!-- Styles -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            color: #202124;
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #1a73e8;
+        }
+        p {
+            font-size: 1.2em;
+        }
+        button {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background: #1557b0;
+        }
+    </style>
 </head>
 <body>
-    <div id="splash-screen" class="splash-screen">
-        <img src="/splash-screen.png" alt="Splash Screen" class="splash-image">
-        <div class="loading-animation"></div>
-    </div>
-    <div id="offline-indicator" class="offline-indicator" style="display: none;">
-        You are currently offline
-    </div>
-    <div class="container">
-        <h1>My ced</h1>
-        <!-- Your app content goes here -->
-    </div>
+    <h1>Welcome to My PWA!</h1>
+    <p>This is a test Progressive Web App (PWA).</p>
+    <p>Try adding this to your home screen and using it offline!</p>
+    <button onclick="alert('PWA is working!')">Click Me</button>
+
+    <!-- Register Service Worker -->
     <script>
-        // Register Service Worker
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registration successful');
-                    })
-                    .catch(err => {
-                        console.log('ServiceWorker registration failed: ', err);
-                    });
-            });
+            navigator.serviceWorker.register('/service-worker.js')
+                .then((registration) => {
+                    console.log('Service Worker registered with scope:', registration.scope);
+                })
+                .catch((error) => {
+                    console.error('Service Worker registration failed:', error);
+                });
         }
-
-        // Handle offline status
-        window.addEventListener('online', () => {
-            document.getElementById('offline-indicator').style.display = 'none';
-        });
-        window.addEventListener('offline', () => {
-            document.getElementById('offline-indicator').style.display = 'block';
-        });
-
-        // Handle splash screen
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                document.getElementById('splash-screen').style.display = 'none';
-            }, 2000);
-        });
-
-        // Show install prompt
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            // Show install button or banner here
-            const installButton = document.createElement('button');
-            installButton.textContent = 'Install App';
-            installButton.className = 'install-button';
-            installButton.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    console.log('User response to install prompt:', outcome);
-                    deferredPrompt = null;
-                }
-            });
-            document.body.appendChild(installButton);
-        });
     </script>
 </body>
 </html>
