@@ -2,53 +2,111 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PWA Builder</title>
+    <title>PWA Builder Tool</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; }
-        input[type="text"], input[type="file"], input[type="color"] { width: 100%; padding: 8px; }
-        .preview { margin-top: 20px; text-align: center; }
-        .preview-img { max-width: 200px; margin: 10px; }
-        .error { color: red; font-size: 0.9em; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            max-width: 800px; 
+            margin: 20px auto; 
+            padding: 20px;
+            background: #f0f2f5;
+        }
+        h1 { 
+            color: #1a73e8; 
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group { 
+            margin-bottom: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        label { 
+            display: block; 
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #202124;
+        }
+        input[type="text"], input[type="file"] { 
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        input[type="color"] {
+            width: 50px;
+            height: 30px;
+            padding: 2px;
+        }
+        .preview { 
+            margin-top: 15px;
+            text-align: center;
+        }
+        .preview-img {
+            max-width: 150px;
+            margin: 10px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            padding: 5px;
+        }
+        button {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #1557b0;
+        }
+        .note {
+            font-size: 0.9em;
+            color: #5f6368;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
-    <h1>PWA Builder</h1>
-
+    <h1>PWA Builder Tool</h1>
+    
     <div class="form-group">
-        <label>App Name:</label>
-        <input type="text" id="appName" required>
-        <span class="error" id="errorAppName"></span>
+        <label>Application Name:</label>
+        <input type="text" id="appName" required placeholder="My Awesome PWA">
     </div>
 
     <div class="form-group">
         <label>Website URL:</label>
-        <input type="text" id="websiteUrl" required placeholder="https://yourwebsite.com">
-        <span class="error" id="errorWebsiteUrl"></span>
+        <input type="text" id="websiteUrl" required placeholder="https://yourdomain.com">
+        <div class="note">Must include https:// or http://</div>
     </div>
 
     <div class="form-group">
-        <label>App Icon (512x512 PNG):</label>
+        <label>App Icon (512x512px PNG):</label>
         <input type="file" id="appIcon" accept=".png" required>
         <div class="preview" id="iconPreview"></div>
-        <span class="error" id="errorAppIcon"></span>
     </div>
 
     <div class="form-group">
-        <label>Splash Screen (1920x1080 PNG):</label>
+        <label>Splash Screen (1920x1080px PNG - optional):</label>
         <input type="file" id="splashScreen" accept=".png">
         <div class="preview" id="splashPreview"></div>
     </div>
 
     <div class="form-group">
         <label>Theme Color:</label>
-        <input type="color" id="themeColor" value="#ffffff">
+        <input type="color" id="themeColor" value="#1a73e8">
     </div>
 
     <div class="form-group">
         <label>Background Color:</label>
-        <input type="color" id="backgroundColor" value="#000000">
+        <input type="color" id="backgroundColor" value="#ffffff">
     </div>
 
     <button onclick="generatePWA()">Generate PWA Package</button>
@@ -56,67 +114,64 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
     <script>
         async function generatePWA() {
-            const zip = new JSZip();
+            if (!validateForm()) return;
             
-            const appName = document.getElementById('appName').value.trim();
-            const websiteUrl = document.getElementById('websiteUrl').value.trim();
+            const zip = new JSZip();
+            const appName = sanitizeInput(document.getElementById('appName').value);
+            const websiteUrl = document.getElementById('websiteUrl').value;
             const themeColor = document.getElementById('themeColor').value;
             const backgroundColor = document.getElementById('backgroundColor').value;
 
-            // Validation
-            const errorAppName = document.getElementById('errorAppName');
-            const errorWebsiteUrl = document.getElementById('errorWebsiteUrl');
-            const errorAppIcon = document.getElementById('errorAppIcon');
-
-            errorAppName.textContent = '';
-            errorWebsiteUrl.textContent = '';
-            errorAppIcon.textContent = '';
-
-            if (!appName) {
-                errorAppName.textContent = 'App Name is required.';
-                return;
-            }
-
-            if (!websiteUrl || !websiteUrl.startsWith('http')) {
-                errorWebsiteUrl.textContent = 'A valid Website URL is required.';
-                return;
-            }
-
-            const iconFile = document.getElementById('appIcon').files[0];
-            if (!iconFile) {
-                errorAppIcon.textContent = 'App Icon is required.';
-                return;
-            }
-
             // Create manifest.json
-            const manifest = {
-                "name": appName,
-                "short_name": appName,
-                "start_url": websiteUrl,
+            const manifest = createManifest(appName, websiteUrl, themeColor, backgroundColor);
+            
+            // Handle icons and splash screens
+            await handleImageAssets(zip);
+            
+            // Create service worker
+            const serviceWorker = createServiceWorker(appName);
+            
+            // Package files
+            zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+            zip.file("service-worker.js", serviceWorker);
+
+            // Generate ZIP
+            const content = await zip.generateAsync({type: "blob"});
+            triggerDownload(content, `${appName}-pwa.zip`);
+        }
+
+        function createManifest(name, url, theme, bg) {
+            return {
+                "name": name,
+                "short_name": name.substring(0, 12),
+                "start_url": url,
                 "display": "standalone",
-                "theme_color": themeColor,
-                "background_color": backgroundColor,
-                "icons": []
+                "theme_color": theme,
+                "background_color": bg,
+                "icons": [{
+                    "src": "icons/icon-512x512.png",
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }]
             };
+        }
 
-            // Add icons
-            const iconContent = await readFile(iconFile);
-            manifest.icons.push({
-                "src": "icons/icon-512x512.png",
-                "sizes": "512x512",
-                "type": "image/png"
-            });
-            zip.folder("icons").file("icon-512x512.png", iconContent);
+        async function handleImageAssets(zip) {
+            const iconFile = document.getElementById('appIcon').files[0];
+            if (iconFile) {
+                const iconContent = await readFile(iconFile);
+                zip.folder("icons").file("icon-512x512.png", iconContent);
+            }
 
-            // Add splash screen (optional)
             const splashFile = document.getElementById('splashScreen').files[0];
             if (splashFile) {
                 const splashContent = await readFile(splashFile);
-                zip.folder("splash").file("splash-1920x1080.png", splashContent);
+                zip.folder("splash").file("splash-screen.png", splashContent);
             }
+        }
 
-            // Create service worker
-            const serviceWorker = `
+        function createServiceWorker(appName) {
+            return `
 self.addEventListener('install', (e) => {
     e.waitUntil(
         caches.open('${appName}').then((cache) => 
@@ -138,59 +193,54 @@ self.addEventListener('fetch', (e) => {
     );
 });
             `;
+        }
 
-            // Create README
-            const readme = `
-# ${appName} PWA Installation Guide
+        function validateForm() {
+            const appName = document.getElementById('appName').value;
+            const websiteUrl = document.getElementById('websiteUrl').value;
+            
+            if (!appName || !websiteUrl) {
+                alert('Please fill in all required fields');
+                return false;
+            }
+            
+            if (!websiteUrl.startsWith('http')) {
+                alert('Website URL must start with http:// or https://');
+                return false;
+            }
+            
+            return true;
+        }
 
-1. Upload all files to your website's root directory.
-2. Add these tags to your website's <head> section:
-   
-   <link rel="manifest" href="/manifest.json">
-   <meta name="theme-color" content="${themeColor}">
-
-3. Register the service worker by adding this script before </body>:
-   
-   <script>
-   if ('serviceWorker' in navigator) {
-       navigator.serviceWorker.register('/service-worker.js');
-   }
-   </script>
-
-4. Ensure your website is served over HTTPS.
-5. Test using Chrome DevTools -> Application -> Service Workers.
-            `;
-
-            // Add files to zip
-            zip.file("manifest.json", JSON.stringify(manifest, null, 2));
-            zip.file("service-worker.js", serviceWorker);
-            zip.file("README.md", readme);
-
-            // Generate zip file
-            const content = await zip.generateAsync({type: "blob"});
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(content);
-            link.download = `${appName}-pwa.zip`;
-            link.click();
+        function sanitizeInput(input) {
+            return input.replace(/[^a-zA-Z0-9\s\-_]/g, '');
         }
 
         function readFile(file) {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = reject;
                 reader.readAsArrayBuffer(file);
             });
         }
 
-        // Preview images
+        function triggerDownload(content, filename) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Image preview handlers
         document.getElementById('appIcon').addEventListener('change', previewImage);
         document.getElementById('splashScreen').addEventListener('change', previewImage);
 
         function previewImage(e) {
-            const previewContainer = document.getElementById(e.target.id + 'Preview');
-            previewContainer.innerHTML = ''; // Clear previous previews
-
+            const previewDiv = document.getElementById(e.target.id + 'Preview');
+            previewDiv.innerHTML = '';
+            
             const file = e.target.files[0];
             if (!file) return;
 
@@ -199,7 +249,7 @@ self.addEventListener('fetch', (e) => {
                 const img = document.createElement('img');
                 img.src = event.target.result;
                 img.className = 'preview-img';
-                previewContainer.appendChild(img);
+                previewDiv.appendChild(img);
             };
             reader.readAsDataURL(file);
         }
