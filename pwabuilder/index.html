@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PWA Builder</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input[type="text"], input[type="file"] { width: 100%; padding: 8px; }
+        .preview { margin-top: 20px; text-align: center; }
+        .preview-img { max-width: 200px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>PWA Builder</h1>
+    
+    <div class="form-group">
+        <label>App Name:</label>
+        <input type="text" id="appName" required>
+    </div>
+
+    <div class="form-group">
+        <label>Website URL:</label>
+        <input type="text" id="websiteUrl" required placeholder="https://yourwebsite.com">
+    </div>
+
+    <div class="form-group">
+        <label>App Icon (512x512 PNG):</label>
+        <input type="file" id="appIcon" accept=".png" required>
+        <div class="preview" id="iconPreview"></div>
+    </div>
+
+    <div class="form-group">
+        <label>Splash Screen (1920x1080 PNG):</label>
+        <input type="file" id="splashScreen" accept=".png">
+        <div class="preview" id="splashPreview"></div>
+    </div>
+
+    <div class="form-group">
+        <label>Theme Color:</label>
+        <input type="color" id="themeColor" value="#ffffff">
+    </div>
+
+    <div class="form-group">
+        <label>Background Color:</label>
+        <input type="color" id="backgroundColor" value="#000000">
+    </div>
+
+    <button onclick="generatePWA()">Generate PWA Package</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <script>
+        async function generatePWA() {
+            const zip = new JSZip();
+            
+            // Get user inputs
+            const appName = document.getElementById('appName').value;
+            const websiteUrl = document.getElementById('websiteUrl').value;
+            const themeColor = document.getElementById('themeColor').value;
+            const backgroundColor = document.getElementById('backgroundColor').value;
+            
+            // Create manifest.json
+            const manifest = {
+                "name": appName,
+                "short_name": appName,
+                "start_url": websiteUrl,
+                "display": "standalone",
+                "theme_color": themeColor,
+                "background_color": backgroundColor,
+                "icons": [],
+                "splash_screens": []
+            };
+
+            // Add icons
+            const iconFile = document.getElementById('appIcon').files[0];
+            if (iconFile) {
+                const iconContent = await readFile(iconFile);
+                manifest.icons.push({
+                    "src": "icons/icon-512x512.png",
+                    "sizes": "512x512",
+                    "type": "image/png"
+                });
+                zip.folder("icons").file("icon-512x512.png", iconContent);
+            }
+
+            // Add splash screen
+            const splashFile = document.getElementById('splashScreen').files[0];
+            if (splashFile) {
+                const splashContent = await readFile(splashFile);
+                manifest.splash_screens.push({
+                    "src": "splash/splash-1920x1080.png",
+                    "sizes": "1920x1080",
+                    "type": "image/png"
+                });
+                zip.folder("splash").file("splash-1920x1080.png", splashContent);
+            }
+
+            // Create service worker
+            const serviceWorker = `
+self.addEventListener('install', (e) => {
+    e.waitUntil(
+        caches.open('${appName}').then((cache) => 
+            cache.addAll([
+                '/',
+                '/index.html',
+                '/manifest.json',
+                '/icons/icon-512x512.png'
+            ])
+        )
+    );
+});
+
+self.addEventListener('fetch', (e) => {
+    e.respondWith(
+        caches.match(e.request).then((response) => 
+            response || fetch(e.request)
+        )
+    );
+});
+            `;
+
+            // Create README
+            const readme = `
+# ${appName} PWA Installation Guide
+
+1. Upload all files to your website's root directory
+2. Add these tags to your website's <head> section:
+   
+   <link rel="manifest" href="/manifest.json">
+   <meta name="theme-color" content="${themeColor}">
+
+3. Register the service worker by adding this script before </body>:
+   
+   <script>
+   if ('serviceWorker' in navigator) {
+       navigator.serviceWorker.register('/service-worker.js');
+   }
+   </script>
+
+4. Ensure your website is served over HTTPS
+5. Test using Chrome DevTools -> Application -> Service Workers
+            `;
+
+            // Add files to zip
+            zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+            zip.file("service-worker.js", serviceWorker);
+            zip.file("README.md", readme);
+
+            // Generate zip file
+            const content = await zip.generateAsync({type: "blob"});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = `${appName}-pwa.zip`;
+            link.click();
+        }
+
+        function readFile(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Preview images
+        document.getElementById('appIcon').addEventListener('change', previewImage);
+        document.getElementById('splashScreen').addEventListener('change', previewImage);
+
+        function previewImage(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = document.createElement('img');
+                img.src = event.target.result;
+                img.className = 'preview-img';
+                document.getElementById(e.target.id + 'Preview').appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
