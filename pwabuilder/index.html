@@ -7,28 +7,32 @@
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; }
-        input[type="text"], input[type="file"] { width: 100%; padding: 8px; }
+        input[type="text"], input[type="file"], input[type="color"] { width: 100%; padding: 8px; }
         .preview { margin-top: 20px; text-align: center; }
         .preview-img { max-width: 200px; margin: 10px; }
+        .error { color: red; font-size: 0.9em; }
     </style>
 </head>
 <body>
     <h1>PWA Builder</h1>
-    
+
     <div class="form-group">
         <label>App Name:</label>
         <input type="text" id="appName" required>
+        <span class="error" id="errorAppName"></span>
     </div>
 
     <div class="form-group">
         <label>Website URL:</label>
         <input type="text" id="websiteUrl" required placeholder="https://yourwebsite.com">
+        <span class="error" id="errorWebsiteUrl"></span>
     </div>
 
     <div class="form-group">
         <label>App Icon (512x512 PNG):</label>
         <input type="file" id="appIcon" accept=".png" required>
         <div class="preview" id="iconPreview"></div>
+        <span class="error" id="errorAppIcon"></span>
     </div>
 
     <div class="form-group">
@@ -54,12 +58,36 @@
         async function generatePWA() {
             const zip = new JSZip();
             
-            // Get user inputs
-            const appName = document.getElementById('appName').value;
-            const websiteUrl = document.getElementById('websiteUrl').value;
+            const appName = document.getElementById('appName').value.trim();
+            const websiteUrl = document.getElementById('websiteUrl').value.trim();
             const themeColor = document.getElementById('themeColor').value;
             const backgroundColor = document.getElementById('backgroundColor').value;
-            
+
+            // Validation
+            const errorAppName = document.getElementById('errorAppName');
+            const errorWebsiteUrl = document.getElementById('errorWebsiteUrl');
+            const errorAppIcon = document.getElementById('errorAppIcon');
+
+            errorAppName.textContent = '';
+            errorWebsiteUrl.textContent = '';
+            errorAppIcon.textContent = '';
+
+            if (!appName) {
+                errorAppName.textContent = 'App Name is required.';
+                return;
+            }
+
+            if (!websiteUrl || !websiteUrl.startsWith('http')) {
+                errorWebsiteUrl.textContent = 'A valid Website URL is required.';
+                return;
+            }
+
+            const iconFile = document.getElementById('appIcon').files[0];
+            if (!iconFile) {
+                errorAppIcon.textContent = 'App Icon is required.';
+                return;
+            }
+
             // Create manifest.json
             const manifest = {
                 "name": appName,
@@ -68,31 +96,22 @@
                 "display": "standalone",
                 "theme_color": themeColor,
                 "background_color": backgroundColor,
-                "icons": [],
-                "splash_screens": []
+                "icons": []
             };
 
             // Add icons
-            const iconFile = document.getElementById('appIcon').files[0];
-            if (iconFile) {
-                const iconContent = await readFile(iconFile);
-                manifest.icons.push({
-                    "src": "icons/icon-512x512.png",
-                    "sizes": "512x512",
-                    "type": "image/png"
-                });
-                zip.folder("icons").file("icon-512x512.png", iconContent);
-            }
+            const iconContent = await readFile(iconFile);
+            manifest.icons.push({
+                "src": "icons/icon-512x512.png",
+                "sizes": "512x512",
+                "type": "image/png"
+            });
+            zip.folder("icons").file("icon-512x512.png", iconContent);
 
-            // Add splash screen
+            // Add splash screen (optional)
             const splashFile = document.getElementById('splashScreen').files[0];
             if (splashFile) {
                 const splashContent = await readFile(splashFile);
-                manifest.splash_screens.push({
-                    "src": "splash/splash-1920x1080.png",
-                    "sizes": "1920x1080",
-                    "type": "image/png"
-                });
                 zip.folder("splash").file("splash-1920x1080.png", splashContent);
             }
 
@@ -124,7 +143,7 @@ self.addEventListener('fetch', (e) => {
             const readme = `
 # ${appName} PWA Installation Guide
 
-1. Upload all files to your website's root directory
+1. Upload all files to your website's root directory.
 2. Add these tags to your website's <head> section:
    
    <link rel="manifest" href="/manifest.json">
@@ -138,8 +157,8 @@ self.addEventListener('fetch', (e) => {
    }
    </script>
 
-4. Ensure your website is served over HTTPS
-5. Test using Chrome DevTools -> Application -> Service Workers
+4. Ensure your website is served over HTTPS.
+5. Test using Chrome DevTools -> Application -> Service Workers.
             `;
 
             // Add files to zip
@@ -156,9 +175,10 @@ self.addEventListener('fetch', (e) => {
         }
 
         function readFile(file) {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
                 reader.readAsArrayBuffer(file);
             });
         }
@@ -168,13 +188,18 @@ self.addEventListener('fetch', (e) => {
         document.getElementById('splashScreen').addEventListener('change', previewImage);
 
         function previewImage(e) {
+            const previewContainer = document.getElementById(e.target.id + 'Preview');
+            previewContainer.innerHTML = ''; // Clear previous previews
+
             const file = e.target.files[0];
+            if (!file) return;
+
             const reader = new FileReader();
             reader.onload = (event) => {
                 const img = document.createElement('img');
                 img.src = event.target.result;
                 img.className = 'preview-img';
-                document.getElementById(e.target.id + 'Preview').appendChild(img);
+                previewContainer.appendChild(img);
             };
             reader.readAsDataURL(file);
         }
